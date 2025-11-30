@@ -1,0 +1,5 @@
+{
+  "name": "GeoVol 3D",
+  "description": "A minimalist tool to build composite 3D objects and calculate their total volume using geometric primitives.",
+  "requestFramePermissions": []
+}

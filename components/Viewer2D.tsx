@@ -48,6 +48,29 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
     fitToScreen();
   }, [figures.length]);
 
+  // FIX: Non-passive event listener to prevent page scrolling
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheelNative = (e: WheelEvent) => {
+        e.preventDefault();
+        const scaleAmount = -e.deltaY * 0.05;
+        setTransform(prev => ({
+            ...prev,
+            scale: Math.min(Math.max(prev.scale + scaleAmount, 5), 200)
+        }));
+    };
+
+    // React's onWheel prop is passive by default in modern browsers/React 18+, which prevents preventDefault().
+    // We must attach it manually with { passive: false }.
+    canvas.addEventListener('wheel', handleWheelNative, { passive: false });
+
+    return () => {
+        canvas.removeEventListener('wheel', handleWheelNative);
+    };
+  }, []);
+
   // Drawing Logic
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -180,14 +203,7 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
     });
   }, [figures, transform]);
 
-  // Mouse Handlers
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const scaleAmount = -e.deltaY * 0.05;
-    const newScale = Math.min(Math.max(transform.scale + scaleAmount, 5), 200);
-    setTransform(prev => ({ ...prev, scale: newScale }));
-  };
-
+  // Mouse Handlers (Click/Drag)
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setLastMouse({ x: e.clientX, y: e.clientY });
@@ -229,7 +245,6 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
       <canvas 
         ref={canvasRef} 
         className={`block w-full h-full cursor-${isDragging ? 'grabbing' : 'grab'}`}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

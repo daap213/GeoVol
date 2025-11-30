@@ -1,110 +1,121 @@
 # GeoVol 3D - Calculadora y Visualizador de Volúmenes Geométricos
 
-## Descripción General
-GeoVol 3D es una aplicación web interactiva desarrollada en React diseñada para la construcción virtual de objetos 3D compuestos a partir de primitivas geométricas (cilindros, cubos, conos, esferas, etc.). La herramienta permite calcular en tiempo real el volumen total, la altura acumulada y estimar propiedades físicas como la masa y el peso basándose en materiales seleccionados.
+## 1. Descripción General
+**GeoVol 3D** es una aplicación web progresiva (SPA) desarrollada con React 19 diseñada para estudiantes y profesionales. Permite construir objetos 3D complejos mediante el apilamiento de primitivas geométricas (cilindros, cubos, conos, etc.), calculando en tiempo real sus propiedades físicas y visualizando el resultado tanto en planos técnicos (2D) como en un entorno tridimensional interactivo (3D).
 
-El proyecto destaca por su capacidad de visualización dual (2D y 3D), gestión de unidades de medida, y herramientas de productividad como deshacer/rehacer y exportación de datos.
+## 2. Características Principales
 
----
+### 🛠️ Modelado y Construcción
+*   **Sistema de Capas**: Construcción secuencial de objetos.
+*   **Primitivas Soportadas**: Cilindro, Cubo, Cono, Esfera, Cono Truncado, Pirámide, Prisma Rectangular.
+*   **Edición Dinámica**: Modificación de altura, radios y dimensiones con actualización instantánea.
 
-## Características Principales
+### 🎨 Visualización Dual
+*   **Vista Técnica 2D (Canvas API)**:
+    *   Representación esquemática frontal.
+    *   **Zoom y Paneo Inteligente**: Navegación fluida con rueda del ratón (Zoom) y arrastre (Pan).
+    *   *Nota Técnica*: Implementación de eventos no pasivos para evitar el scroll de la página al hacer zoom.
+    *   **Auto-fit**: Ajuste automático de la escala para encuadrar el objeto.
+*   **Vista Realista 3D (Three.js)**:
+    *   Renderizado de alta fidelidad con luces y sombras.
+    *   Controles orbitales (rotar, mover, acercar).
+    *   **Modo Rayos X (Wireframe)**: Opción para ver la estructura interna y aristas del objeto.
 
-1.  **Modelado Compuesto**: Apilamiento secuencial de figuras geométricas.
-2.  **Visualización Dual**:
-    *   **2D (Canvas)**: Vista esquemática frontal con herramientas de Zoom y Paneo.
-    *   **3D (Three.js)**: Renderizado realista con iluminación, sombras, rotación orbital y modo "Alambre/Corte".
-3.  **Cálculos Físicos**:
-    *   Cálculo de Volumen acumulado.
-    *   Estimación de Masa (kg/g/ton) basada en densidad de materiales.
-    *   Cálculo de Peso/Fuerza (Newton/kN).
-    *   Materiales personalizables (densidad editable).
-4.  **Gestión de Datos**:
-    *   Exportación a JSON (guardar proyecto) y CSV (Excel).
-    *   Importación de configuraciones previas.
-    *   Historial de cambios (Undo/Redo) con atajos de teclado (Ctrl+Z).
-5.  **UX Avanzada**:
-    *   Inputs inteligentes con validación visual.
-    *   Diseño responsivo y minimalista.
-    *   Selector de unidades dinámico (mm, cm, m, in, ft).
+### ⚖️ Motor de Física
+*   **Cálculo de Volumen**: Sumatoria precisa de volúmenes parciales.
+*   **Materiales**: Selección de densidad basada en materiales reales (Acero, Madera, Hormigón, Oro, etc.).
+*   **Material Personalizado**: Opción para ingresar manualmente una densidad específica (kg/m³).
+*   **Masa y Peso**:
+    *   Cálculo de Masa (g, kg, ton).
+    *   Cálculo de Peso/Fuerza (N, kN) considerando gravedad estándar ($g=9.81 m/s^2$).
 
----
+### 💾 Gestión de Datos y Productividad
+*   **Deshacer/Rehacer (Undo/Redo)**: Historial completo de acciones con soporte para atajos de teclado (`Ctrl+Z`, `Ctrl+Shift+Z`).
+*   **Importar/Exportar**:
+    *   **JSON**: Guardar y cargar el estado completo del proyecto.
+    *   **CSV**: Exportar tabla de datos para análisis en Excel/Sheets.
+*   **Unidades**: Selector global (mm, cm, m, in, ft) que ajusta los cálculos físicos automáticamente.
 
-## Estructura del Proyecto
-
-El proyecto sigue una arquitectura modular basada en componentes funcionales de React.
-
-### 1. Archivos Principales
-
-*   **`index.tsx`**: Punto de entrada de la aplicación. Monta el componente raíz en el DOM.
-*   **`App.tsx`**: Componente raíz y controlador principal.
-    *   Gestiona el estado global: lista de figuras (`figures`), historial (`history`), configuración de materiales y unidades.
-    *   Coordina la comunicación entre el panel de control, el resumen y los visualizadores.
-    *   Implementa la lógica de `Undo/Redo` y la carga de archivos.
-
-### 2. Lógica y Tipos (`/src`)
-
-*   **`types.ts`**: Definiciones de TypeScript.
-    *   `FigureType`: Enum con las figuras soportadas.
-    *   `FigureData`: Interfaz principal de un objeto figura.
-    *   `MATERIALS`: Constante con los presets de densidades (Acero, Madera, etc.).
-*   **`utils.ts`**: Biblioteca de funciones puras.
-    *   `calculateFigure()`: Contiene las fórmulas matemáticas (V = πr²h, etc.).
-    *   `calculateMass()`: Conversión de unidades y cálculo de masa.
-    *   `exportToCSV()`: Generación de archivos descargables.
-
-### 3. Componentes (`/src/components`)
-
-*   **`FigureCard.tsx`**: Tarjeta individual para cada capa/figura.
-    *   Contiene el componente `SmartInput` para la edición de valores numéricos.
-    *   Maneja la validación de inputs (bordes rojos si valor <= 0).
-    *   Muestra la fórmula específica y el volumen parcial de esa figura.
-
-*   **`Summary.tsx`**: Panel de resumen superior.
-    *   Muestra totales (Volumen, Altura, Masa, Peso).
-    *   Contiene el selector de Materiales y el input de densidad personalizada.
-    *   Botones de Exportación e Importación.
-
-*   **`Viewer2D.tsx`**: Visualizador Técnico.
-    *   Tecnología: **HTML5 Canvas API**.
-    *   Renderiza una vista frontal esquemática.
-    *   Implementa lógica de transformación matricial manual para **Zoom** (escala) y **Paneo** (traslación) con el mouse.
-    *   Incluye función "Auto-fit" para ajustar el dibujo a la pantalla.
-
-*   **`Viewer3D.tsx`**: Visualizador Realista.
-    *   Tecnología: **Three.js**.
-    *   Genera mallas 3D (`THREE.Mesh`) basadas en los parámetros de las figuras.
-    *   Gestiona cámara, luces, sombras y controles orbitales (`OrbitControls`).
-    *   Implementa el modo "Wireframe" (Alambre) reduciendo la opacidad y añadiendo estructuras de líneas.
+### 📱 Experiencia de Usuario (UX)
+*   **Inputs Mejorados**: Controles numéricos personalizados con botones de incremento/decremento (+/-) y validación visual (bordes rojos para valores inválidos).
+*   **Diseño Responsivo**: Interfaz adaptable a móviles, tablets y escritorio.
+*   **Layout Optimizado**: Ajuste dinámico de alturas para evitar espacios vacíos en listas cortas.
 
 ---
 
-## Guía de Funcionamiento Técnico
+## 3. Estructura del Proyecto
 
-### Flujo de Datos
-1.  El usuario selecciona una figura y hace clic en "Agregar".
-2.  `App.tsx` crea un objeto `FigureData` con parámetros por defecto (`utils.ts`).
-3.  El estado `figures` se actualiza.
-4.  **React Re-renderiza**:
-    *   `Summary` recalcula los totales sumando el array.
-    *   `FigureCard` genera una nueva tarjeta.
-    *   `Viewer3D` y `Viewer2D` reciben el nuevo array y reconstruyen la escena visual.
+El proyecto utiliza una arquitectura modular basada en componentes funcionales de React y Hooks.
 
-### Sistema de Unidades
-El sistema base de cálculo es agnóstico, pero para la física (Masa) se asume que la densidad está en **kg/m³**.
-*   El archivo `utils.ts` contiene factores de conversión. Si el usuario selecciona "mm", el volumen se divide por $10^9$ antes de multiplicar por la densidad para obtener la masa en kg correcta.
+### Archivos Principales
+| Archivo | Descripción |
+| :--- | :--- |
+| **`index.tsx`** | Punto de entrada. Montaje del DOM virtual. |
+| **`App.tsx`** | **Controlador Principal**. Gestiona el estado global (`figures`), historial, configuración de materiales y layout general. |
+| **`types.ts`** | **Definiciones**. Interfaces TypeScript (`FigureData`, `Material`) y constantes del sistema. |
+| **`utils.ts`** | **Lógica de Negocio**. Funciones puras para cálculos geométricos, conversión de unidades y formateo de monedas/física. |
 
-### Historial (Undo/Redo)
-Se utiliza un patrón de doble pila:
-*   `history`: Array de estados pasados.
-*   `future`: Array de estados deshechos (para rehacer).
-*   Cada vez que se agrega o elimina una figura, el estado actual se empuja a `history`.
+### Componentes (`/src/components`)
+
+#### 1. `FigureCard.tsx`
+Tarjeta de interfaz para cada figura geométrica.
+*   **`SmartInput`**: Componente interno extraído para evitar re-renderizados innecesarios. Elimina los selectores nativos del navegador y añade botones táctiles para mejor control.
+*   Muestra la fórmula matemática específica con los valores sustituidos.
+
+#### 2. `Summary.tsx`
+Panel de resumen y configuración global.
+*   Calcula totales de Volumen, Altura, Masa y Peso.
+*   Contiene el selector de materiales y la lógica de exportación.
+
+#### 3. `Viewer2D.tsx`
+Motor de renderizado 2D.
+*   Usa un `<canvas>` HTML5.
+*   Dibuja las figuras apiladas calculando coordenadas relativas.
+*   Gestiona la matriz de transformación (Escala, X, Y) para el zoom y paneo.
+
+#### 4. `Viewer3D.tsx`
+Motor de renderizado 3D.
+*   Inicializa una escena `THREE.Scene`.
+*   Convierte los datos de `FigureParams` en geometrías de Three.js (`CylinderGeometry`, `BoxGeometry`, etc.).
+*   Gestiona el ciclo de renderizado (`requestAnimationFrame`) y limpieza de memoria.
 
 ---
 
-## Stack Tecnológico
+## 4. Apéndice Matemático
 
-*   **Frontend Library**: React 19
-*   **Lenguaje**: TypeScript
-*   **Gráficos 3D**: Three.js (Vanilla implementation wrapped in React)
-*   **Estilos**: Tailwind CSS
-*   **Iconos**: Lucide React
+Fórmulas utilizadas para el cálculo de volumen ($V$):
+
+*   **Cilindro**: $V = \pi \cdot r^2 \cdot h$
+*   **Cubo**: $V = l^3$ (donde $l=altura$)
+*   **Esfera**: $V = \frac{4}{3} \cdot \pi \cdot r^3$
+*   **Cono**: $V = \frac{1}{3} \cdot \pi \cdot r^2 \cdot h$
+*   **Cono Truncado**: $V = \frac{1}{3} \cdot \pi \cdot h \cdot (r_1^2 + r_1 \cdot r_2 + r_2^2)$
+*   **Pirámide (Base Cuadrada)**: $V = \frac{1}{3} \cdot l^2 \cdot h$
+*   **Prisma Rectangular**: $V = w \cdot d \cdot h$
+
+**Cálculos Físicos:**
+*   **Masa ($m$)**: $m = V_{m^3} \cdot \text{Densidad}$
+*   **Peso ($F$)**: $F = m \cdot 9.81 m/s^2$
+
+---
+
+## 5. Tecnologías
+
+*   **Core**: React 19, TypeScript.
+*   **Gráficos**: Three.js (0.181+).
+*   **Estilos**: Tailwind CSS (v3.4).
+*   **Iconos**: Lucide React.
+*   **Build**: Entorno estándar de ES Modules.
+
+---
+
+## 6. Instalación y Uso
+
+1.  Clonar el repositorio.
+2.  Instalar dependencias (si se usa entorno local Node): `npm install`.
+3.  Ejecutar: `npm start`.
+4.  **Uso Básico**:
+    *   Seleccione una figura en el panel izquierdo y pulse **"+"**.
+    *   Ajuste las dimensiones en la tarjeta creada.
+    *   Cambie la vista entre 2D y 3D en el panel derecho.
+    *   Seleccione el material en el panel superior para ver el peso estimado.

@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { FigureData, FigureType } from '../types';
-import { Trash2 } from 'lucide-react'; // Assuming lucide-react is available, or we use SVG
+import { Trash2, Minus, Plus } from 'lucide-react';
 
 interface FigureCardProps {
   figure: FigureData;
@@ -10,28 +11,74 @@ interface FigureCardProps {
   onDelete: (id: number) => void;
 }
 
+// Extracted component to prevent re-mounting and focus loss
+const SmartInput = ({ label, field, value, unit, onUpdate, figureId }: { 
+    label: string, 
+    field: string, 
+    value: number, 
+    unit: string, 
+    onUpdate: (id: number, field: string, value: number) => void,
+    figureId: number
+}) => {
+    const isValid = value > 0;
+    
+    const handleChange = (newValueStr: string) => {
+        const numValue = parseFloat(newValueStr);
+        // Allow updating even if NaN initially to allow clearing input, but for safety in calc, we handle it upstream or here.
+        // If we strictly block NaN, user can't delete "2" to type "3" (state becomes empty string -> NaN).
+        // For this simple app, we can default to 0 if NaN, or just pass it if the upstream handles it.
+        // The upstream `updateFigure` expects a number.
+        if (newValueStr === '') {
+             // Optional: Handle empty string if needed, currently treating as is
+             // requires changing parent type to allow string or handling 0
+             onUpdate(figureId, field, 0); 
+             return;
+        }
+        if (!isNaN(numValue)) {
+            onUpdate(figureId, field, numValue);
+        }
+    };
+
+    const adjustValue = (amount: number) => {
+        const newValue = Math.max(0.1, parseFloat((value + amount).toFixed(2)));
+        onUpdate(figureId, field, newValue);
+    };
+
+    return (
+        <div className="flex flex-col">
+            <label className="text-[10px] uppercase tracking-wider text-secondary font-semibold mb-1">{label} ({unit})</label>
+            <div className={`flex items-center bg-slate-50 border rounded-md transition-all group-focus-within:ring-1 group-focus-within:ring-accent ${isValid ? 'border-slate-200' : 'border-red-300 bg-red-50'}`}>
+                <button 
+                    onClick={() => adjustValue(-0.5)}
+                    className="p-2 text-slate-400 hover:text-accent hover:bg-slate-100 rounded-l-md transition-colors active:bg-slate-200"
+                    title="Disminuir"
+                    tabIndex={-1}
+                >
+                    <Minus size={12} strokeWidth={3} />
+                </button>
+                <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    value={value === 0 ? '' : value}
+                    onChange={(e) => handleChange(e.target.value)}
+                    className="w-full bg-transparent text-center text-sm font-semibold text-primary focus:outline-none py-1.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button 
+                    onClick={() => adjustValue(0.5)}
+                    className="p-2 text-slate-400 hover:text-accent hover:bg-slate-100 rounded-r-md transition-colors active:bg-slate-200"
+                    title="Aumentar"
+                    tabIndex={-1}
+                >
+                    <Plus size={12} strokeWidth={3} />
+                </button>
+            </div>
+            {!isValid && <span className="text-[9px] text-red-500 mt-0.5 text-center">Inválido</span>}
+        </div>
+    );
+};
+
 export const FigureCard: React.FC<FigureCardProps> = ({ figure, index, unit, onUpdate, onDelete }) => {
-  const handleChange = (field: string, value: string) => {
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue)) {
-      onUpdate(figure.id, field, numValue);
-    }
-  };
-
-  const InputField = ({ label, field, value }: { label: string, field: string, value: number }) => (
-    <div className="flex flex-col">
-      <label className="text-[10px] uppercase tracking-wider text-secondary font-semibold mb-1">{label} ({unit})</label>
-      <input
-        type="number"
-        step="0.1"
-        min="0.1"
-        value={value}
-        onChange={(e) => handleChange(field, e.target.value)}
-        className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
-      />
-    </div>
-  );
-
   return (
     <div className="group bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow relative mb-3">
       <div className="flex justify-between items-center mb-3">
@@ -41,41 +88,41 @@ export const FigureCard: React.FC<FigureCardProps> = ({ figure, index, unit, onU
         </div>
         <button 
           onClick={() => onDelete(figure.id)}
-          className="text-slate-300 hover:text-red-500 transition-colors p-1"
+          className="text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors p-1.5"
           aria-label="Eliminar figura"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          <Trash2 size={16} />
         </button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         {(figure.type !== FigureType.Sphere) && (
-            <InputField label="Altura" field="height" value={figure.params.height} />
+            <SmartInput label="Altura" field="height" value={figure.params.height} unit={unit} onUpdate={onUpdate} figureId={figure.id} />
         )}
         
         {(figure.type === FigureType.Cylinder || figure.type === FigureType.Cone || figure.type === FigureType.TruncatedCone || figure.type === FigureType.Sphere) && (
-             <InputField label="Radio" field="radius" value={figure.params.radius} />
+             <SmartInput label="Radio" field="radius" value={figure.params.radius} unit={unit} onUpdate={onUpdate} figureId={figure.id} />
         )}
 
         {figure.type === FigureType.TruncatedCone && (
-             <InputField label="Radio Inf." field="radiusBottom" value={figure.params.radiusBottom} />
+             <SmartInput label="Radio Inf." field="radiusBottom" value={figure.params.radiusBottom} unit={unit} onUpdate={onUpdate} figureId={figure.id} />
         )}
 
         {figure.type === FigureType.Pyramid && (
-            <InputField label="Lado Base" field="width" value={figure.params.width} />
+            <SmartInput label="Lado Base" field="width" value={figure.params.width} unit={unit} onUpdate={onUpdate} figureId={figure.id} />
         )}
 
         {figure.type === FigureType.RectangularPrism && (
             <>
-                <InputField label="Ancho" field="width" value={figure.params.width} />
-                <InputField label="Profundidad" field="depth" value={figure.params.depth} />
+                <SmartInput label="Ancho" field="width" value={figure.params.width} unit={unit} onUpdate={onUpdate} figureId={figure.id} />
+                <SmartInput label="Profundidad" field="depth" value={figure.params.depth} unit={unit} onUpdate={onUpdate} figureId={figure.id} />
             </>
         )}
       </div>
 
       <div className="border-t border-slate-100 pt-2 flex justify-between items-center text-xs">
-        <span className="text-secondary font-mono truncate max-w-[60%]">{figure.formula}</span>
-        <span className="font-bold text-emerald-600">{figure.volume.toFixed(3)} {unit}³</span>
+        <span className="text-secondary font-mono truncate max-w-[60%] opacity-80" title={figure.formula}>{figure.formula}</span>
+        <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{figure.volume.toFixed(3)} {unit}³</span>
       </div>
     </div>
   );

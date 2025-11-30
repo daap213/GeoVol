@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { FigureData, FigureType } from '../types';
 import { getFigureHeight } from '../utils';
@@ -22,16 +23,35 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
     const height = containerRef.current.clientHeight;
     const totalWorldHeight = figures.reduce((acc, f) => acc + getFigureHeight(f.type, f.params), 0);
     
-    // Find maximum width roughly
-    const maxRadius = figures.reduce((max, f) => Math.max(max, f.params.radius || 0, (f.params.width || 0)/2, f.params.radiusBottom || 0), 0);
+    // Find maximum width correctly based on figure type
+    const maxRadius = figures.reduce((max, f) => {
+        let currentR = 0;
+        if (f.type === FigureType.Cube) {
+            currentR = f.params.height / 2;
+        } else if (f.type === FigureType.RectangularPrism || f.type === FigureType.Pyramid) {
+            currentR = f.params.width / 2;
+        } else if (f.type === FigureType.TruncatedCone) {
+            currentR = Math.max(f.params.radius, f.params.radiusBottom);
+        } else {
+            // Cylinder, Cone, Sphere
+            currentR = f.params.radius;
+        }
+        return Math.max(max, currentR);
+    }, 0);
     
-    const padding = 60;
+    const padding = 80; // Padding for labels
     
-    // Calculate scale based primarily on height, but check width too
+    // Calculate scale based primarily on height
     let newScale = totalWorldHeight > 0 
         ? (height - padding * 2) / totalWorldHeight 
         : 20;
     
+    // Check if width exceeds bounds with this scale
+    const width = containerRef.current.clientWidth;
+    if (maxRadius * 2 * newScale > width - padding) {
+        newScale = (width - padding) / (maxRadius * 2);
+    }
+
     // Safety clamp
     newScale = Math.max(newScale, 5);
     newScale = Math.min(newScale, 100);
@@ -43,12 +63,19 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
     });
   };
 
-  // Initial fit when figures change significantly (length change usually implies new object structure)
+  // Debounced Auto-fit logic for initial loads or structural changes
   useEffect(() => {
-    fitToScreen();
-  }, [figures.length]);
+    // Timer to avoid resizing constantly while user types (debounce)
+    const timer = setTimeout(() => {
+        fitToScreen();
+    }, 600); // 600ms debounce
+    return () => clearTimeout(timer);
+  }, [figures]); // Trigger on ANY figure change (dimensions or count)
 
-  // FIX: Non-passive event listener to prevent page scrolling
+  // Initial fit
+  useEffect(() => { fitToScreen(); }, []);
+
+  // Native Wheel Event
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -61,14 +88,8 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
             scale: Math.min(Math.max(prev.scale + scaleAmount, 5), 200)
         }));
     };
-
-    // React's onWheel prop is passive by default in modern browsers/React 18+, which prevents preventDefault().
-    // We must attach it manually with { passive: false }.
     canvas.addEventListener('wheel', handleWheelNative, { passive: false });
-
-    return () => {
-        canvas.removeEventListener('wheel', handleWheelNative);
-    };
+    return () => canvas.removeEventListener('wheel', handleWheelNative);
   }, []);
 
   // Drawing Logic
@@ -86,19 +107,20 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
 
     const centerX = canvas.width / 2 + transform.offsetX;
     
-    // Determine starting Y based on total height and offset
-    // We want the base of the object to be somewhat grounded, but panning changes this
+    // Determine starting Y
     const totalWorldHeight = figures.reduce((acc, f) => acc + getFigureHeight(f.type, f.params), 0);
     const groundY = (canvas.height / 2) + (totalWorldHeight * transform.scale / 2) + transform.offsetY;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Grid lines for reference (optional, keeps it minimal)
+    // Grid / Ground
     ctx.strokeStyle = '#f1f5f9';
     ctx.lineWidth = 1;
-    const gridSize = 50;
-    
-    // Ground line
+    // Simple Grid
+    for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+    for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width, i); ctx.stroke(); }
+
+    // Hard Ground Line
     ctx.beginPath();
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 2;
@@ -108,44 +130,52 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
 
     let currentY = groundY;
 
+    // Font for labels
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
     figures.forEach(fig => {
         const h = fig.params.height * transform.scale;
         const r = fig.params.radius * transform.scale;
         const rBot = fig.params.radiusBottom * transform.scale;
         const w = fig.params.width * transform.scale;
         
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'; // Blue-500 with low opacity
-        ctx.strokeStyle = '#3b82f6'; // Blue-500
-        ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.1)'; 
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
+
+        let labelH_Y = currentY - h / 2;
+        let labelH_X = centerX + Math.max(r, w/2, rBot) + 15;
+        let labelW_Y = currentY + 15;
+        let labelW_X = centerX;
+        let labelW_Text = "";
 
         switch (fig.type) {
             case FigureType.Cylinder:
                 ctx.rect(centerX - r, currentY - h, r * 2, h);
-                ctx.fill();
-                ctx.stroke();
+                ctx.fill(); ctx.stroke();
                 // Caps
-                ctx.beginPath();
-                ctx.ellipse(centerX, currentY, r, r * 0.2, 0, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.ellipse(centerX, currentY - h, r, r * 0.2, 0, 0, Math.PI * 2);
-                ctx.stroke();
-                currentY -= h;
+                ctx.beginPath(); ctx.ellipse(centerX, currentY, r, r * 0.2, 0, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.ellipse(centerX, currentY - h, r, r * 0.2, 0, 0, Math.PI * 2); ctx.stroke();
+                
+                labelW_Text = `R: ${fig.params.radius}`;
+                labelH_X = centerX + r + 10;
                 break;
             
             case FigureType.Cube:
                 ctx.rect(centerX - h/2, currentY - h, h, h);
-                ctx.fill();
-                ctx.stroke();
-                currentY -= h;
+                ctx.fill(); ctx.stroke();
+                labelW_Text = `L: ${fig.params.height}`;
+                labelH_X = centerX + h/2 + 10;
                 break;
 
             case FigureType.RectangularPrism:
                 ctx.rect(centerX - w/2, currentY - h, w, h);
-                ctx.fill();
-                ctx.stroke();
-                currentY -= h;
+                ctx.fill(); ctx.stroke();
+                labelW_Text = `W: ${fig.params.width}`;
+                labelH_X = centerX + w/2 + 10;
                 break;
             
             case FigureType.Cone:
@@ -153,13 +183,11 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
                 ctx.lineTo(centerX, currentY - h);
                 ctx.lineTo(centerX + r, currentY);
                 ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+                ctx.fill(); ctx.stroke();
                 // Base
-                ctx.beginPath();
-                ctx.ellipse(centerX, currentY, r, r * 0.2, 0, 0, Math.PI * 2);
-                ctx.stroke();
-                currentY -= h;
+                ctx.beginPath(); ctx.ellipse(centerX, currentY, r, r * 0.2, 0, 0, Math.PI * 2); ctx.stroke();
+                labelW_Text = `R: ${fig.params.radius}`;
+                labelH_X = centerX + r + 10;
                 break;
 
             case FigureType.TruncatedCone:
@@ -168,25 +196,22 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
                 ctx.lineTo(centerX + r, currentY - h);
                 ctx.lineTo(centerX + rBot, currentY);
                 ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+                ctx.fill(); ctx.stroke();
                  // Bases
-                 ctx.beginPath();
-                 ctx.ellipse(centerX, currentY, rBot, rBot * 0.2, 0, 0, Math.PI * 2);
-                 ctx.stroke();
-                 ctx.beginPath();
-                 ctx.ellipse(centerX, currentY - h, r, r * 0.2, 0, 0, Math.PI * 2);
-                 ctx.stroke();
-                currentY -= h;
+                 ctx.beginPath(); ctx.ellipse(centerX, currentY, rBot, rBot * 0.2, 0, 0, Math.PI * 2); ctx.stroke();
+                 ctx.beginPath(); ctx.ellipse(centerX, currentY - h, r, r * 0.2, 0, 0, Math.PI * 2); ctx.stroke();
+                 labelW_Text = `R: ${fig.params.radiusBottom} / ${fig.params.radius}`;
+                 labelH_X = centerX + Math.max(r, rBot) + 10;
                 break;
 
             case FigureType.Sphere:
                 const rad = fig.params.radius * transform.scale;
                 const centerY = currentY - rad;
                 ctx.arc(centerX, centerY, rad, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                currentY -= (rad * 2);
+                ctx.fill(); ctx.stroke();
+                labelH_Y = centerY;
+                labelW_Text = `R: ${fig.params.radius}`;
+                labelH_X = centerX + rad + 10;
                 break;
             
             case FigureType.Pyramid:
@@ -195,15 +220,40 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
                 ctx.lineTo(centerX, currentY - h);
                 ctx.lineTo(centerX + baseHalf, currentY);
                 ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                currentY -= h;
+                ctx.fill(); ctx.stroke();
+                labelW_Text = `W: ${fig.params.width}`;
+                labelH_X = centerX + baseHalf + 10;
                 break;
         }
+
+        // Draw Dimensions
+        ctx.fillStyle = '#64748b';
+        
+        // Height
+        if (fig.type !== FigureType.Sphere) {
+            ctx.textAlign = 'left';
+            ctx.fillText(`H: ${fig.params.height}`, labelH_X, labelH_Y);
+            // Draw little indicator line
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.moveTo(labelH_X - 2, labelH_Y);
+            ctx.lineTo(labelH_X - 8, labelH_Y);
+            ctx.stroke();
+        }
+
+        // Width/Radius
+        if (fig.type !== FigureType.TruncatedCone) {
+             ctx.textAlign = 'center';
+             // Draw below the object if possible
+             ctx.fillText(labelW_Text, centerX, currentY + 10);
+        }
+
+        const addedHeight = (fig.type === FigureType.Sphere) ? (fig.params.radius * transform.scale * 2) : h;
+        currentY -= addedHeight;
     });
   }, [figures, transform]);
 
-  // Mouse Handlers (Click/Drag)
+  // Mouse Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setLastMouse({ x: e.clientX, y: e.clientY });
@@ -224,7 +274,7 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
   const handleMouseUp = () => setIsDragging(false);
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[400px] bg-slate-50 rounded-lg border border-slate-200 overflow-hidden relative group">
+    <div ref={containerRef} className="w-full h-full min-h-[400px] bg-slate-50 rounded-lg border border-slate-200 overflow-hidden relative group select-none">
       <div className="absolute top-4 left-4 bg-white/80 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-secondary shadow-sm z-10">
         Vista Frontal (2D)
       </div>

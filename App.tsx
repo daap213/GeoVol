@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { FigureData, FigureType, Material, MATERIALS } from './types';
 import { calculateFigure, getDefaultParams } from './utils';
@@ -207,9 +208,8 @@ const App: React.FC = () => {
                )}
             </div>
             
-            {/* FIX: Changed from fixed h-[500px] to h-auto with max limits. 
-                This prevents empty whitespace when there are few items. */}
-            <div className="space-y-3 h-auto max-h-[500px] lg:max-h-[calc(100vh-400px)] overflow-y-auto custom-scrollbar pr-2 pb-10">
+            {/* Updated Height Logic: Grows automatically but has a much larger max limit to match the viewer height */}
+            <div className="space-y-3 h-auto max-h-[650px] lg:max-h-[750px] overflow-y-auto custom-scrollbar pr-2 pb-10">
               {figures.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
                   <p className="text-slate-400 text-sm">No hay figuras seleccionadas</p>

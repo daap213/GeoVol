@@ -1,3 +1,4 @@
+
 # GeoVol 3D - Calculadora y Visualizador de Volúmenes Geométricos
 
 ## 1. Descripción General
@@ -10,16 +11,16 @@
 *   **Primitivas Soportadas**: Cilindro, Cubo, Cono, Esfera, Cono Truncado, Pirámide, Prisma Rectangular.
 *   **Edición Dinámica**: Modificación de altura, radios y dimensiones con actualización instantánea.
 
-### 🎨 Visualización Dual
+### 🎨 Visualización Dual Avanzada
 *   **Vista Técnica 2D (Canvas API)**:
-    *   Representación esquemática frontal.
-    *   **Zoom y Paneo Inteligente**: Navegación fluida con rueda del ratón (Zoom) y arrastre (Pan).
-    *   *Nota Técnica*: Implementación de eventos no pasivos para evitar el scroll de la página al hacer zoom.
-    *   **Auto-fit**: Ajuste automático de la escala para encuadrar el objeto.
+    *   Representación esquemática frontal con **Acotación Automática** (etiquetas de texto H/R dibujadas directamente en el canvas).
+    *   **Zoom y Paneo Inteligente**: Navegación fluida con bloqueo de scroll nativo (EventListener pasivo desactivado).
+    *   **Auto-fit Reactivo**: Sistema inteligente que detecta cambios tanto en la cantidad de figuras como en sus **dimensiones individuales** (radio/altura). Utiliza un *debounce* (retardo) de 600ms para reajustar el zoom automáticamente al terminar de editar, evitando saltos visuales durante la escritura.
 *   **Vista Realista 3D (Three.js)**:
-    *   Renderizado de alta fidelidad con luces y sombras.
-    *   Controles orbitales (rotar, mover, acercar).
-    *   **Modo Rayos X (Wireframe)**: Opción para ver la estructura interna y aristas del objeto.
+    *   **Persistencia de Cámara**: La arquitectura separa la inicialización de la escena de la actualización de geometría. Esto permite que la cámara mantenga su posición, ángulo y zoom exactos incluso cuando se modifican parámetros o se agregan figuras.
+    *   **Etiquetas Flotantes (CSS2D)**: Cotas de dimensión (Altura, Radio/Ancho) renderizadas como elementos HTML que flotan sobre el objeto 3D.
+    *   **Limpieza de Memoria (Garbage Collection)**: Implementación de limpieza manual del DOM para eliminar correctamente las etiquetas flotantes al borrar figuras, evitando "etiquetas fantasma".
+    *   **Enfoque Dinámico**: El punto de pivote (target) de la cámara se actualiza suavemente al centro de masa del objeto compuesto.
 
 ### ⚖️ Motor de Física
 *   **Cálculo de Volumen**: Sumatoria precisa de volúmenes parciales.
@@ -37,9 +38,9 @@
 *   **Unidades**: Selector global (mm, cm, m, in, ft) que ajusta los cálculos físicos automáticamente.
 
 ### 📱 Experiencia de Usuario (UX)
-*   **Inputs Mejorados**: Controles numéricos personalizados con botones de incremento/decremento (+/-) y validación visual (bordes rojos para valores inválidos).
-*   **Diseño Responsivo**: Interfaz adaptable a móviles, tablets y escritorio.
-*   **Layout Optimizado**: Ajuste dinámico de alturas para evitar espacios vacíos en listas cortas.
+*   **Inputs Mejorados**: Controles numéricos personalizados con botones de incremento/decremento (+/-) y validación visual.
+*   **Scroll Adaptativo**: El contenedor de capas crece dinámicamente hasta aprovechar el espacio disponible en pantalla antes de mostrar barras de desplazamiento.
+*   **Diseño Responsivo**: Interfaz adaptable que maximiza el área de trabajo en escritorio y se compacta en móviles.
 
 ---
 
@@ -51,7 +52,7 @@ El proyecto utiliza una arquitectura modular basada en componentes funcionales d
 | Archivo | Descripción |
 | :--- | :--- |
 | **`index.tsx`** | Punto de entrada. Montaje del DOM virtual. |
-| **`App.tsx`** | **Controlador Principal**. Gestiona el estado global (`figures`), historial, configuración de materiales y layout general. |
+| **`App.tsx`** | **Controlador Principal**. Gestiona el estado global (`figures`), historial, configuración de materiales y layout general. Implementa lógica de altura dinámica para listas (`max-h` adaptativo). |
 | **`types.ts`** | **Definiciones**. Interfaces TypeScript (`FigureData`, `Material`) y constantes del sistema. |
 | **`utils.ts`** | **Lógica de Negocio**. Funciones puras para cálculos geométricos, conversión de unidades y formateo de monedas/física. |
 
@@ -59,25 +60,26 @@ El proyecto utiliza una arquitectura modular basada en componentes funcionales d
 
 #### 1. `FigureCard.tsx`
 Tarjeta de interfaz para cada figura geométrica.
-*   **`SmartInput`**: Componente interno extraído para evitar re-renderizados innecesarios. Elimina los selectores nativos del navegador y añade botones táctiles para mejor control.
+*   **`SmartInput`**: Componente interno extraído para estabilidad del foco. Elimina selectores nativos y añade botones táctiles (+/- 0.5).
 *   Muestra la fórmula matemática específica con los valores sustituidos.
 
 #### 2. `Summary.tsx`
 Panel de resumen y configuración global.
 *   Calcula totales de Volumen, Altura, Masa y Peso.
-*   Contiene el selector de materiales y la lógica de exportación.
+*   Contiene el selector de materiales (con input condicional para "Personalizado") y la lógica de exportación.
 
 #### 3. `Viewer2D.tsx`
 Motor de renderizado 2D.
-*   Usa un `<canvas>` HTML5.
-*   Dibuja las figuras apiladas calculando coordenadas relativas.
-*   Gestiona la matriz de transformación (Escala, X, Y) para el zoom y paneo.
+*   Usa `<canvas>` HTML5.
+*   **Render Loop**: Optimizado para dibujar texto de cotas y figuras simultáneamente con redibujado instantáneo.
+*   **Lógica de Zoom**: Calcula el ancho máximo real (considerando si la figura es cubo, cilindro o prisma) para ajustar el *viewport* correctamente.
 
 #### 4. `Viewer3D.tsx`
-Motor de renderizado 3D.
-*   Inicializa una escena `THREE.Scene`.
-*   Convierte los datos de `FigureParams` en geometrías de Three.js (`CylinderGeometry`, `BoxGeometry`, etc.).
-*   Gestiona el ciclo de renderizado (`requestAnimationFrame`) y limpieza de memoria.
+Motor de renderizado 3D Avanzado.
+*   **Arquitectura Init/Update**:
+    *   `useEffect` 1 (Init): Crea escena, cámara, luces y renderers una sola vez.
+    *   `useEffect` 2 (Update): Gestiona mallas y etiquetas.
+*   **Gestión de Recursos**: Elimina geometrías y materiales antiguos. Itera manualmente sobre los hijos de las mallas para eliminar `CSS2DObject.element` del DOM, solucionando problemas de persistencia visual.
 
 ---
 
@@ -102,20 +104,19 @@ Fórmulas utilizadas para el cálculo de volumen ($V$):
 ## 5. Tecnologías
 
 *   **Core**: React 19, TypeScript.
-*   **Gráficos**: Three.js (0.181+).
+*   **Gráficos**: Three.js (0.181+) + CSS2DRenderer.
 *   **Estilos**: Tailwind CSS (v3.4).
 *   **Iconos**: Lucide React.
-*   **Build**: Entorno estándar de ES Modules.
 
 ---
 
 ## 6. Instalación y Uso
 
 1.  Clonar el repositorio.
-2.  Instalar dependencias (si se usa entorno local Node): `npm install`.
+2.  Instalar dependencias: `npm install`.
 3.  Ejecutar: `npm start`.
 4.  **Uso Básico**:
     *   Seleccione una figura en el panel izquierdo y pulse **"+"**.
-    *   Ajuste las dimensiones en la tarjeta creada.
-    *   Cambie la vista entre 2D y 3D en el panel derecho.
-    *   Seleccione el material en el panel superior para ver el peso estimado.
+    *   Ajuste las dimensiones usando los botones +/- o escribiendo.
+    *   Use la regla 📏 en la vista 3D para ver las medidas.
+    *   Use el selector de unidades arriba para cambiar todo el sistema (ej. a metros).

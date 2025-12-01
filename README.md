@@ -1,113 +1,138 @@
-
 # GeoVol 3D - Calculadora y Visualizador de Volúmenes Geométricos
 
 ## 1. Descripción General
-**GeoVol 3D** es una aplicación web moderna (SaaS) desarrollada con React 19. Permite a ingenieros, estudiantes y diseñadores construir objetos 3D complejos mediante el apilamiento de primitivas geométricas, calculando en tiempo real sus propiedades físicas y visualizando el resultado tanto en planos técnicos (2D) como en un entorno tridimensional interactivo (3D).
-
-En su versión 2.0, incorpora capacidades de **nube**, permitiendo a los usuarios registrarse, guardar sus proyectos y gestionarlos desde un panel de control centralizado.
+**GeoVol 3D** es una aplicación web moderna tipo SaaS (Software as a Service) desarrollada con React 19. Su objetivo es permitir a ingenieros, estudiantes y diseñadores construir objetos 3D complejos mediante el apilamiento de primitivas geométricas, calcular sus propiedades físicas en tiempo real y gestionar proyectos en la nube.
 
 ## 2. Características Principales
 
-### ☁️ Gestión de Proyectos en la Nube (Fase 2)
-*   **Autenticación Segura**: Sistema de Registro y Login integrado con Supabase.
-*   **Dashboard de Proyectos**: Visualización de proyectos guardados con miniaturas generadas automáticamente desde la vista 3D.
-*   **Modo Invitado (Guest Mode)**: Permite utilizar el editor completo sin iniciar sesión. Si el usuario decide guardar, el sistema preserva su trabajo y lo redirige al flujo de registro (Guardado Diferido).
-*   **Persistencia**: Almacenamiento de configuraciones de figuras, unidades y materiales en base de datos PostgreSQL.
+### ☁️ Gestión de Proyectos (Fase 2)
+*   **Autenticación**: Registro e inicio de sesión seguro mediante Supabase.
+*   **Modo Invitado (Guest Mode)**: Permite probar la herramienta sin registro. Implementa "Guardado Diferido": si un invitado guarda, se preserva su trabajo durante el flujo de registro.
+*   **Persistencia**: Guardado de geometría, materiales y unidades en base de datos.
+*   **Dashboard**: Vista de galería con miniaturas de los proyectos.
 
-### 🛠️ Modelado y Construcción
-*   **Sistema de Capas**: Construcción secuencial de objetos.
-*   **Primitivas Soportadas**: Cilindro, Cubo, Cono, Esfera, Cono Truncado, Pirámide, Prisma Rectangular.
-*   **Edición Dinámica**: Modificación de altura, radios y dimensiones con actualización instantánea.
-
-### 🎨 Visualización Dual Avanzada
-*   **Vista Técnica 2D (Canvas API)**:
-    *   Representación esquemática frontal con **Acotación Automática**.
-    *   **Auto-fit Reactivo**: Sistema inteligente que detecta cambios en dimensiones y reajusta el zoom automáticamente.
-*   **Vista Realista 3D (Three.js)**:
-    *   **Captura de Miniaturas**: Generación automática de screenshots para el dashboard.
-    *   **Etiquetas Flotantes (CSS2D)**: Cotas de dimensión superpuestas al modelo 3D.
-    *   **Persistencia de Cámara**: Arquitectura optimizada que mantiene la posición del usuario al actualizar la geometría.
-
-### ⚖️ Motor de Física
-*   **Cálculo de Volumen**: Sumatoria precisa de volúmenes parciales.
-*   **Materiales**: Base de datos de densidades (Acero, Madera, Hormigón, Oro, etc.) y soporte para densidad personalizada.
-*   **Masa y Peso**: Cálculo automático de masa (kg) y fuerza/peso (N).
-
-### 💾 Gestión de Datos Local
-*   **Historial**: Deshacer/Rehacer (Undo/Redo) con atajos de teclado (`Ctrl+Z`).
-*   **Importación/Exportación**: Soporte para archivos JSON que incluyen geometría y configuración de materiales.
+### 🛠️ Herramientas de Modelado
+*   **Primitivas**: Cilindro, Cubo, Cono, Esfera, Cono Truncado, Pirámide, Prisma.
+*   **Visualización Dual**: 
+    *   **2D**: Plano técnico con acotación automática y auto-zoom reactivo.
+    *   **3D**: Renderizado interactivo con Three.js, sombras y etiquetas flotantes (CSS2D).
+*   **Física**: Cálculo de Masa (kg) y Peso (N) basado en densidades materiales.
 
 ---
 
 ## 3. Arquitectura y Patrones de Diseño
 
-El proyecto sigue una arquitectura modular y escalable:
+El proyecto utiliza una arquitectura modular basada en componentes funcionales y hooks.
 
-*   **Enrutamiento de Estado**: `App.tsx` actúa como un router ligero gestionando las vistas (`LANDING`, `AUTH`, `DASHBOARD`, `EDITOR`) y el estado de la sesión.
-*   **Patrón Estrategia (Strategy Pattern)**: La lógica de cálculo geométrico en `utils.ts` permite añadir nuevas figuras fácilmente.
-*   **Custom Hooks**: `useFigureManager` encapsula toda la lógica de manipulación de figuras e historial.
-*   **Optimización Gráfica**: Gestión manual de recursos en Three.js para evitar fugas de memoria.
+### A. Enrutamiento de Estado (State-Based Routing)
+En lugar de `react-router`, `App.tsx` funciona como una **Máquina de Estados Finita**.
+*   **Estados**: `LANDING` -> `AUTH` -> `DASHBOARD` <-> `EDITOR`.
+*   **Ventaja**: Permite transiciones fluidas y preservación de memoria (ej. `pendingData`) entre vistas sin recargar la página.
+
+### B. Patrón Estrategia (Strategy Pattern)
+Ubicado en `utils.ts`. La lógica de cálculo de cada figura está encapsulada en estrategias individuales.
+*   **Estructura**: `FIGURE_STRATEGIES` mapea cada `FigureType` a funciones `calculate()` y `getHeight()`.
+*   **Escalabilidad**: Para añadir una nueva figura, solo se agrega una entrada al objeto, cumpliendo el principio Open/Closed.
+
+### C. Gestión de Estado Híbrida
+*   **Lógica de Negocio**: Extraída al custom hook `useFigureManager` (patrón Facade para lógica de estado).
+*   **Lógica de UI 3D**: Uso de `refs` en `Viewer3D` para manipulación imperativa de Three.js, evitando re-renderizados de React innecesarios en el bucle de animación.
 
 ---
 
 ## 4. Configuración del Backend (Supabase)
 
-Para desplegar este proyecto, es necesario configurar un proyecto en Supabase y ejecutar el siguiente script SQL en el Editor SQL para crear la estructura de base de datos necesaria:
+El backend se gestiona con Supabase (PostgreSQL + Auth). Sigue estos pasos para configurarlo:
+
+### 1. Crear Proyecto
+Regístrate en [supabase.com](https://supabase.com) y crea un proyecto vacío.
+
+### 2. Configurar Base de Datos
+Ve al **SQL Editor** en tu dashboard de Supabase y ejecuta el siguiente script para crear la tabla y las políticas de seguridad:
 
 ```sql
--- 1. Crear tabla de proyectos
+-- 1. Tabla de Proyectos
 create table projects (
   id bigint generated by default as identity primary key,
   user_id uuid references auth.users not null,
   name text not null,
   description text,
-  data jsonb not null, -- Almacena el array de figuras
-  thumbnail text, -- Almacena la imagen en base64
+  data jsonb not null,        -- JSON con las figuras y config
+  thumbnail text,             -- Imagen Base64 de la vista previa
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 2. Habilitar seguridad (Row Level Security)
+-- 2. Habilitar RLS (Row Level Security)
 alter table projects enable row level security;
 
--- 3. Crear políticas de acceso (CRUD solo para el propietario)
+-- 3. Políticas de Acceso (Solo el dueño ve sus datos)
 create policy "Users can view their own projects" on projects for select using (auth.uid() = user_id);
 create policy "Users can insert their own projects" on projects for insert with check (auth.uid() = user_id);
 create policy "Users can update their own projects" on projects for update using (auth.uid() = user_id);
 create policy "Users can delete their own projects" on projects for delete using (auth.uid() = user_id);
 ```
 
-Luego, actualice el archivo `src/supabaseClient.ts` con sus credenciales:
-
+### 3. Conectar Cliente
+Edita el archivo `src/supabaseClient.ts`:
 ```typescript
-const SUPABASE_URL = 'SU_URL_DE_SUPABASE';
-const SUPABASE_ANON_KEY = 'SU_CLAVE_ANONIMA';
+const SUPABASE_URL = 'TU_URL_DEL_PROYECTO';
+const SUPABASE_ANON_KEY = 'TU_CLAVE_ANONIMA_PUBLICA';
 ```
 
 ---
 
 ## 5. Estructura del Proyecto
 
-### Componentes Clave (`/src/components`)
-
-*   **`Auth.tsx`**: Maneja el registro e inicio de sesión.
-*   **`Dashboard.tsx`**: Panel principal para usuarios autenticados. Lista proyectos y permite crear nuevos o eliminar existentes.
-*   **`Editor.tsx`**: El núcleo de la aplicación. Contiene el lienzo de trabajo, integración con visualizadores y lógica de guardado.
-*   **`Viewer3D.tsx`**: Motor gráfico. Expone métodos imperativos (`captureScreenshot`) mediante `forwardRef` para generar las miniaturas del dashboard.
-*   **`LandingPage.tsx`**: Página de entrada optimizada para conversión.
+```
+src/
+├── App.tsx                 # [Router] Orquestador principal y manejo de sesión.
+├── supabaseClient.ts       # [Config] Cliente de conexión a la BD.
+├── types.ts                # [Types] Definiciones de interfaces (Project, FigureData).
+├── utils.ts                # [Logic] Cálculos matemáticos y estrategias.
+├── hooks.ts                # [State] Custom Hook para lógica de Editor (Undo/Redo).
+│
+└── components/
+    ├── Auth.tsx            # [View] Login y Registro.
+    ├── Dashboard.tsx       # [View] Galería de proyectos y CRUD.
+    ├── Editor.tsx          # [View] Espacio de trabajo principal.
+    ├── FigureCard.tsx      # [UI] Tarjeta de edición de parámetros.
+    ├── LandingPage.tsx     # [View] Página de aterrizaje.
+    ├── Summary.tsx         # [UI] Panel de resultados físicos y exportación.
+    ├── Viewer2D.tsx        # [Canvas] Visualizador técnico con auto-fit.
+    └── Viewer3D.tsx        # [Three.js] Visualizador realista interactivo.
+```
 
 ---
 
-## 6. Tecnologías
+## 6. Instalación y Ejecución
 
-*   **Frontend**: React 19, TypeScript.
-*   **Backend / BaaS**: Supabase (PostgreSQL + Auth).
-*   **Gráficos**: Three.js, CSS2DRenderer.
-*   **Estilos**: Tailwind CSS v3.4.
+Para ejecutar el proyecto localmente:
+
+### Prerrequisitos
+*   Node.js (v16 o superior)
+*   NPM o Yarn
+
+### Comandos
+1.  **Instalar dependencias**:
+    ```bash
+    npm install
+    ```
+
+2.  **Iniciar servidor de desarrollo**:
+    ```bash
+    npm start
+    ```
+    La aplicación estará disponible en `http://localhost:3000` (o el puerto que asigne tu bundler).
+
+3.  **Construir para producción**:
+    ```bash
+    npm run build
+    ```
 
 ---
 
 ## 7. Créditos
 
-**Diseño y Desarrollo**: Daniel Alvarado  
-**Año**: 2025
+**Diseño y Desarrollo**: Daniel Alvarado
+**Versión**: 2.0 (2025)

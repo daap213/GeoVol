@@ -19,7 +19,7 @@
 *   **Vista Realista 3D (Three.js)**:
     *   **Persistencia de Cámara**: Arquitectura optimizada que mantiene la posición del usuario al actualizar la geometría.
     *   **Etiquetas Flotantes (CSS2D)**: Cotas de dimensión superpuestas al modelo 3D.
-    *   **Limpieza de Memoria**: Gestión eficiente del DOM para eliminar etiquetas antiguas.
+    *   **Optimización de Renderizado**: Reutilización de materiales e instancias para alto rendimiento.
 
 ### ⚖️ Motor de Física
 *   **Cálculo de Volumen**: Sumatoria precisa de volúmenes parciales.
@@ -32,7 +32,22 @@
 
 ---
 
-## 3. Estructura del Proyecto
+## 3. Arquitectura y Patrones de Diseño
+
+El proyecto ha sido diseñado siguiendo principios de ingeniería de software para asegurar escalabilidad y mantenibilidad:
+
+### 🧩 Patrón Estrategia (Strategy Pattern)
+La lógica de cálculo geométrico en `utils.ts` utiliza un patrón de estrategia (`FIGURE_STRATEGIES`). Esto permite añadir nuevas figuras geométricas en el futuro simplemente extendiendo el objeto de configuración, sin necesidad de modificar el flujo de control principal, cumpliendo con el principio **Open/Closed** de SOLID.
+
+### 🎣 Custom Hooks (Separación de Intereses)
+La lógica de estado y gestión de datos se ha encapsulado en el hook `useFigureManager` (`hooks.ts`). Esto separa la lógica de negocio de la interfaz de usuario (`App.tsx`), facilitando las pruebas y la reutilización del código.
+
+### ⚡ Optimización Gráfica
+En `Viewer3D.tsx`, se gestionan las instancias de Three.js para minimizar la recolección de basura (Garbage Collection). Los materiales y geometrías se crean y destruyen de manera controlada, y las etiquetas HTML se gestionan manualmente para evitar fugas de memoria en el DOM.
+
+---
+
+## 4. Estructura del Proyecto
 
 ### Componentes Principales (`/src/components`)
 
@@ -59,7 +74,7 @@ Motor de renderizado realista.
 
 ---
 
-## 4. Tecnologías
+## 5. Tecnologías
 
 *   **Frontend**: React 19, TypeScript.
 *   **Gráficos**: Three.js, CSS2DRenderer.
@@ -68,7 +83,7 @@ Motor de renderizado realista.
 
 ---
 
-## 5. Créditos
+## 6. Créditos
 
 **Diseño y Desarrollo**: Daniel Alvarado  
 **Año**: 2025

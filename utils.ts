@@ -1,58 +1,77 @@
 
-import { FigureType, FigureParams, CalculationResult, FigureData, MATERIALS } from './types';
+import { FigureType, FigureParams, CalculationResult, FigureData } from './types';
+
+// Formatter utility
+const fmt = (n: number) => n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
+
+// Strategy Interface
+type FigureStrategy = {
+    calculate: (params: FigureParams) => CalculationResult;
+    getHeight: (params: FigureParams) => number;
+};
+
+// Scalable Strategy Map
+const FIGURE_STRATEGIES: Record<FigureType, FigureStrategy> = {
+    [FigureType.Cylinder]: {
+        calculate: ({ radius, height }) => ({
+            volume: Math.PI * Math.pow(radius, 2) * height,
+            formula: `π · ${fmt(radius)}² · ${fmt(height)}`
+        }),
+        getHeight: (p) => p.height
+    },
+    [FigureType.Cube]: {
+        calculate: ({ height }) => ({
+            volume: Math.pow(height, 3),
+            formula: `${fmt(height)}³`
+        }),
+        getHeight: (p) => p.height
+    },
+    [FigureType.TruncatedCone]: {
+        calculate: ({ height, radius, radiusBottom }) => ({
+            volume: (1 / 3) * Math.PI * height * (Math.pow(radius, 2) + (radius * radiusBottom) + Math.pow(radiusBottom, 2)),
+            formula: `(1/3)·π·${fmt(height)}·(${fmt(radius)}² + ${fmt(radius)}·${fmt(radiusBottom)} + ${fmt(radiusBottom)}²)`
+        }),
+        getHeight: (p) => p.height
+    },
+    [FigureType.Cone]: {
+        calculate: ({ radius, height }) => ({
+            volume: (1 / 3) * Math.PI * Math.pow(radius, 2) * height,
+            formula: `(1/3)·π·${fmt(radius)}²·${fmt(height)}`
+        }),
+        getHeight: (p) => p.height
+    },
+    [FigureType.Sphere]: {
+        calculate: ({ radius }) => ({
+            volume: (4 / 3) * Math.PI * Math.pow(radius, 3),
+            formula: `(4/3)·π·${fmt(radius)}³`
+        }),
+        getHeight: (p) => p.radius * 2
+    },
+    [FigureType.Pyramid]: {
+        calculate: ({ width, height }) => ({
+            volume: (1 / 3) * Math.pow(width, 2) * height,
+            formula: `(1/3)·${fmt(width)}²·${fmt(height)}`
+        }),
+        getHeight: (p) => p.height
+    },
+    [FigureType.RectangularPrism]: {
+        calculate: ({ width, depth, height }) => ({
+            volume: width * depth * height,
+            formula: `${fmt(width)}·${fmt(depth)}·${fmt(height)}`
+        }),
+        getHeight: (p) => p.height
+    }
+};
 
 export const calculateFigure = (type: FigureType, params: FigureParams): CalculationResult => {
-  let vol = 0;
-  let formula = '';
-  const { height, radius, radiusBottom, width, depth } = params;
+    const strategy = FIGURE_STRATEGIES[type];
+    if (!strategy) throw new Error(`Strategy for ${type} not implemented`);
+    return strategy.calculate(params);
+};
 
-  // Formatter for display
-  const fmt = (n: number) => n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
-
-  switch (type) {
-    case FigureType.Cylinder:
-      vol = Math.PI * Math.pow(radius, 2) * height;
-      formula = `π · ${fmt(radius)}² · ${fmt(height)}`;
-      break;
-
-    case FigureType.Cube:
-      // Cube uses height as side length
-      vol = Math.pow(height, 3);
-      formula = `${fmt(height)}³`;
-      break;
-
-    case FigureType.TruncatedCone:
-      // V = (1/3) * π * h * (r1^2 + r1*r2 + r2^2)
-      vol = (1 / 3) * Math.PI * height * (Math.pow(radius, 2) + (radius * radiusBottom) + Math.pow(radiusBottom, 2));
-      formula = `(1/3)·π·${fmt(height)}·(${fmt(radius)}² + ${fmt(radius)}·${fmt(radiusBottom)} + ${fmt(radiusBottom)}²)`;
-      break;
-
-    case FigureType.Cone:
-      vol = (1 / 3) * Math.PI * Math.pow(radius, 2) * height;
-      formula = `(1/3)·π·${fmt(radius)}²·${fmt(height)}`;
-      break;
-
-    case FigureType.Sphere:
-      // Volume based on radius
-      vol = (4 / 3) * Math.PI * Math.pow(radius, 3);
-      formula = `(4/3)·π·${fmt(radius)}³`;
-      break;
-
-    case FigureType.Pyramid:
-      // Assuming square base where side = width (or height if simplified in UI)
-      // V = (1/3) * BaseArea * h
-      // Here we assume Base is a square with side 'width'
-      vol = (1 / 3) * Math.pow(width, 2) * height;
-      formula = `(1/3)·${fmt(width)}²·${fmt(height)}`;
-      break;
-
-    case FigureType.RectangularPrism:
-      vol = width * depth * height;
-      formula = `${fmt(width)}·${fmt(depth)}·${fmt(height)}`;
-      break;
-  }
-
-  return { volume: vol, formula };
+export const getFigureHeight = (type: FigureType, params: FigureParams): number => {
+    const strategy = FIGURE_STRATEGIES[type];
+    return strategy ? strategy.getHeight(params) : params.height;
 };
 
 export const getDefaultParams = (type: FigureType): FigureParams => {
@@ -65,31 +84,16 @@ export const getDefaultParams = (type: FigureType): FigureParams => {
   };
 };
 
-export const getFigureHeight = (type: FigureType, params: FigureParams): number => {
-    if (type === FigureType.Sphere) {
-        return params.radius * 2;
-    }
-    return params.height;
-}
-
 export const calculateMass = (volume: number, density: number, unit: string): number => {
-    // Volume is in unit^3. Density is in kg/m^3.
-    // We need to convert volume to m^3 based on the unit.
-    
-    let conversionFactorToM3 = 1;
-    
-    switch(unit) {
-        case 'mm': conversionFactorToM3 = 1e-9; break;
-        case 'cm': conversionFactorToM3 = 1e-6; break;
-        case 'm': conversionFactorToM3 = 1; break;
-        case 'in': conversionFactorToM3 = 0.000016387; break;
-        case 'ft': conversionFactorToM3 = 0.0283168; break;
-    }
-
-    const volumeInM3 = volume * conversionFactorToM3;
-    const massKg = volumeInM3 * density;
-    
-    return massKg;
+    const conversionFactors: Record<string, number> = {
+        'mm': 1e-9,
+        'cm': 1e-6,
+        'm': 1,
+        'in': 0.000016387,
+        'ft': 0.0283168
+    };
+    const factor = conversionFactors[unit] || 1;
+    return (volume * factor) * density;
 };
 
 export const formatMass = (massKg: number): string => {
@@ -130,4 +134,4 @@ export const exportToCSV = (figures: FigureData[], unit: string) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-}
+};

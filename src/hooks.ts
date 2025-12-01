@@ -1,5 +1,6 @@
+
 import { useState, useCallback, useEffect } from 'react';
-import { FigureData, FigureType, FigureParams } from './types';
+import { FigureData, FigureType } from './types';
 import { calculateFigure, getDefaultParams } from './utils';
 
 export const useFigureManager = () => {

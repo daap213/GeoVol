@@ -1,4 +1,5 @@
-import { FigureType, FigureParams, CalculationResult, FigureData } from './types';
+
+import { FigureType, FigureParams, CalculationResult } from './types';
 
 // Formatter utility
 const fmt = (n: number) => n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);

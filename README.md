@@ -1,3 +1,4 @@
+
 # GeoVol 3D - Calculadora y Visualizador de Volúmenes Geométricos
 
 ## 1. Descripción General
@@ -25,12 +26,12 @@
 El proyecto utiliza una arquitectura modular basada en componentes funcionales y hooks.
 
 ### A. Enrutamiento de Estado (State-Based Routing)
-En lugar de `react-router`, `App.tsx` funciona como una **Máquina de Estados Finita**.
+En lugar de `react-router`, `src/App.tsx` funciona como una **Máquina de Estados Finita**.
 *   **Estados**: `LANDING` -> `AUTH` -> `DASHBOARD` <-> `EDITOR`.
 *   **Ventaja**: Permite transiciones fluidas y preservación de memoria (ej. `pendingData`) entre vistas sin recargar la página.
 
 ### B. Patrón Estrategia (Strategy Pattern)
-Ubicado en `utils.ts`. La lógica de cálculo de cada figura está encapsulada en estrategias individuales.
+Ubicado en `src/utils.ts`. La lógica de cálculo de cada figura está encapsulada en estrategias individuales.
 *   **Estructura**: `FIGURE_STRATEGIES` mapea cada `FigureType` a funciones `calculate()` y `getHeight()`.
 *   **Escalabilidad**: Para añadir una nueva figura, solo se agrega una entrada al objeto, cumpliendo el principio Open/Closed.
 
@@ -74,11 +75,9 @@ create policy "Users can delete their own projects" on projects for delete using
 ```
 
 ### 3. Conectar Cliente
-Edita el archivo `src/supabaseClient.ts`:
-```typescript
-const SUPABASE_URL = 'TU_URL_DEL_PROYECTO';
-const SUPABASE_ANON_KEY = 'TU_CLAVE_ANONIMA_PUBLICA';
-```
+Configura las variables de entorno en tu plataforma de despliegue (ej. Cloudflare Pages o `.env.local` para desarrollo):
+* `VITE_SUPABASE_URL`: Tu URL del proyecto.
+* `VITE_SUPABASE_ANON_KEY`: Tu clave anónima pública.
 
 ---
 
@@ -87,6 +86,7 @@ const SUPABASE_ANON_KEY = 'TU_CLAVE_ANONIMA_PUBLICA';
 ```
 src/
 ├── App.tsx                 # [Router] Orquestador principal y manejo de sesión.
+├── index.tsx               # [Entry] Punto de entrada de React.
 ├── supabaseClient.ts       # [Config] Cliente de conexión a la BD.
 ├── types.ts                # [Types] Definiciones de interfaces (Project, FigureData).
 ├── utils.ts                # [Logic] Cálculos matemáticos y estrategias.
@@ -105,30 +105,16 @@ src/
 
 ---
 
-## 6. Instalación y Ejecución
+## 6. Despliegue en Cloudflare Pages
 
-Para ejecutar el proyecto localmente:
-
-### Prerrequisitos
-*   Node.js (v16 o superior)
-*   NPM o Yarn
-
-### Comandos
-1.  **Instalar dependencias**:
-    ```bash
-    npm install
-    ```
-
-2.  **Iniciar servidor de desarrollo**:
-    ```bash
-    npm start
-    ```
-    La aplicación estará disponible en `http://localhost:3000` (o el puerto que asigne tu bundler).
-
-3.  **Construir para producción**:
-    ```bash
-    npm run build
-    ```
+1.  Sube el repositorio a GitHub.
+2.  En Cloudflare Pages, conecta tu repositorio.
+3.  **Configuración de Build**:
+    *   **Framework**: Vite
+    *   **Build command**: `npm run build`
+    *   **Build output directory**: `dist`
+4.  **Variables de Entorno**:
+    Agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
 ---
 

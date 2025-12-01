@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Project, FigureData } from '../types';
-import { Loader2, Plus, Trash2, Edit3, Calendar, Box, LogOut } from 'lucide-react';
+import { Loader2, Plus, Trash2, Calendar, Box, LogOut } from 'lucide-react';
 
 interface DashboardProps {
     onOpenProject: (project: Project | null) => void;

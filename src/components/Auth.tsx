@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { Mail, Lock, User, Loader2, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
 
 interface AuthProps {
     onSuccess: () => void;

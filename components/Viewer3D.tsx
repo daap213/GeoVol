@@ -129,8 +129,6 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({ figures, materialConfig }) =
     // Clean up old meshes only
     meshesRef.current.forEach(mesh => {
         // IMPORTANT: Manually remove CSS2DObjects from DOM
-        // The render loop or CSS2DRenderer doesn't always automatically clean up DOM elements
-        // if we are destroying the parent mesh entirely and recreating it.
         for (let i = mesh.children.length - 1; i >= 0; i--) {
             const child = mesh.children[i];
             if (child instanceof CSS2DObject) {
@@ -218,33 +216,48 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({ figures, materialConfig }) =
 
             // Labels
             if (showDimensions) {
-                // Height Label
-                const hDiv = document.createElement('div');
-                hDiv.className = 'bg-black/75 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm font-mono select-none pointer-events-none transition-opacity duration-200';
-                hDiv.textContent = `H:${safeH}`;
-                const hLabel = new CSS2DObject(hDiv);
-                hLabel.position.set(0, 0, 0); 
-                mesh.add(hLabel);
+                // Height Label (Do not show for Sphere)
+                if (fig.type !== FigureType.Sphere) {
+                    const hDiv = document.createElement('div');
+                    hDiv.className = 'bg-black/75 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm font-mono select-none pointer-events-none transition-opacity duration-200 z-20';
+                    hDiv.textContent = `H:${safeH}`;
+                    const hLabel = new CSS2DObject(hDiv);
+                    // Position height label slightly to the left/outside to avoid overlap
+                    hLabel.position.set(0, 0, 0); 
+                    mesh.add(hLabel);
+                }
                 
                 // Radius/Width Label
                 const wDiv = document.createElement('div');
-                wDiv.className = 'bg-slate-200/90 text-slate-800 text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm font-mono border border-slate-300 select-none pointer-events-none transition-opacity duration-200';
+                wDiv.className = 'bg-slate-200/90 text-slate-800 text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm font-mono border border-slate-300 select-none pointer-events-none transition-opacity duration-200 z-20';
                 
                 let wLabelPos = new THREE.Vector3(0, 0, 0);
+                let labelText = '';
+
                 if (fig.type === FigureType.Cylinder || fig.type === FigureType.Cone || fig.type === FigureType.Sphere) {
-                    wDiv.textContent = `R:${safeR}`;
+                    labelText = `R:${safeR}`;
                     wLabelPos.set(safeR, 0, 0);
-                } else if (fig.type === FigureType.RectangularPrism || fig.type === FigureType.Pyramid) {
-                    wDiv.textContent = `W:${safeW}`;
+                } else if (fig.type === FigureType.TruncatedCone) {
+                    labelText = `R:${safeRBot}/${safeR}`;
+                    // Position at the widest part
+                    wLabelPos.set(Math.max(safeR, safeRBot), 0, 0);
+                } else if (fig.type === FigureType.RectangularPrism) {
+                    labelText = `W:${safeW} D:${safeD}`;
+                    wLabelPos.set(safeW / 2, 0, safeD / 2);
+                } else if (fig.type === FigureType.Pyramid) {
+                    labelText = `W:${safeW}`;
                     wLabelPos.set(safeW / 2, 0, 0);
                 } else if (fig.type === FigureType.Cube) {
-                     wDiv.textContent = `L:${safeH}`;
+                     labelText = `L:${safeH}`;
                      wLabelPos.set(safeH / 2, 0, 0);
                 }
 
-                const wLabel = new CSS2DObject(wDiv);
-                wLabel.position.copy(wLabelPos);
-                mesh.add(wLabel);
+                if (labelText) {
+                    wDiv.textContent = labelText;
+                    const wLabel = new CSS2DObject(wDiv);
+                    wLabel.position.copy(wLabelPos);
+                    mesh.add(wLabel);
+                }
             }
 
             mesh.position.y = currentY + yOffset;
@@ -256,15 +269,11 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({ figures, materialConfig }) =
         }
     });
 
-    // Update Controls Target to center of mass, but DO NOT reset Camera Position completely
+    // Update Controls Target to center of mass
     if (controlsRef.current && figures.length > 0) {
-        // Calculate new target center
         const newTargetY = currentY / 2;
-        
-        // Smoothly update target
         controlsRef.current.target.set(0, newTargetY, 0);
     } else if (controlsRef.current && figures.length === 0) {
-        // Reset target if empty
         controlsRef.current.target.set(0, 0, 0);
     }
 

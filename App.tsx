@@ -6,9 +6,12 @@ import { FigureCard } from './components/FigureCard';
 import { Viewer2D } from './components/Viewer2D';
 import { Viewer3D } from './components/Viewer3D';
 import { Summary } from './components/Summary';
+import { LandingPage } from './components/LandingPage';
 import { Undo, Redo, RotateCcw } from 'lucide-react';
 
 const App: React.FC = () => {
+  const [showLanding, setShowLanding] = useState(true);
+  
   const [figures, setFigures] = useState<FigureData[]>([]);
   const [selectedType, setSelectedType] = useState<FigureType>(FigureType.Cylinder);
   const [viewMode, setViewMode] = useState<'2D' | '3D'>('2D');
@@ -81,17 +84,6 @@ const App: React.FC = () => {
   };
 
   const updateFigure = (id: number, field: string, value: number) => {
-    // Only save to history on "commit" (blur or delayed)? 
-    // For simplicity, we won't save history on EVERY keystroke change, but logic here applies immediately.
-    // To properly support Undo for sliders/inputs, usually debounce is needed. 
-    // For now, let's treat update as a state change. To avoid spamming history, we might check if value changed significantly
-    // or rely on user to be careful. A better approach for inputs is save history on focus, update on change.
-    
-    // For this implementation, we will NOT push to history on every update to keep performance smooth,
-    // but practically we should. Let's assume updates are minor. 
-    // *Improved strategy*: We pass `updateFigure` which updates State. 
-    // We can add a `saveSnapshot` wrapper if we wanted specific undo points.
-    
     setFigures(prev => prev.map(fig => {
       if (fig.id !== id) return fig;
       
@@ -107,7 +99,6 @@ const App: React.FC = () => {
     }));
   };
   
-  // Custom wrapper to save history before deleting
   const removeFigure = (id: number) => {
     saveToHistory(figures);
     setFigures(figures.filter(f => f.id !== id));
@@ -125,10 +116,14 @@ const App: React.FC = () => {
       return () => window.removeEventListener('keydown', handleKeyDown);
   }, [history, future, figures]);
 
+  if (showLanding) {
+      return <LandingPage onStart={() => setShowLanding(false)} />;
+  }
+
   return (
     <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto font-sans text-slate-800">
       <header className="mb-8 text-center relative">
-        <h1 className="text-3xl md:text-4xl font-bold text-primary mb-2 tracking-tight">GeoVol <span className="text-accent">3D</span></h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-primary mb-2 tracking-tight cursor-pointer" onClick={() => setShowLanding(true)}>GeoVol <span className="text-accent">3D</span></h1>
         <p className="text-secondary max-w-xl mx-auto mb-4">Construye objetos compuestos, calcula volúmenes y estima pesos.</p>
         
         <div className="flex justify-center gap-4">

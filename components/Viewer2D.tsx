@@ -148,8 +148,6 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
 
         let labelH_Y = currentY - h / 2;
         let labelH_X = centerX + Math.max(r, w/2, rBot) + 15;
-        let labelW_Y = currentY + 15;
-        let labelW_X = centerX;
         let labelW_Text = "";
 
         switch (fig.type) {
@@ -229,7 +227,7 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
         // Draw Dimensions
         ctx.fillStyle = '#64748b';
         
-        // Height
+        // Height Label
         if (fig.type !== FigureType.Sphere) {
             ctx.textAlign = 'left';
             ctx.fillText(`H: ${fig.params.height}`, labelH_X, labelH_Y);
@@ -241,10 +239,10 @@ export const Viewer2D: React.FC<Viewer2DProps> = ({ figures }) => {
             ctx.stroke();
         }
 
-        // Width/Radius
-        if (fig.type !== FigureType.TruncatedCone) {
+        // Width/Radius Label
+        if (labelW_Text) {
              ctx.textAlign = 'center';
-             // Draw below the object if possible
+             // Draw below the object
              ctx.fillText(labelW_Text, centerX, currentY + 10);
         }
 

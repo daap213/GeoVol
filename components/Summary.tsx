@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { FigureData, Material, MATERIALS } from '../types';
-import { getFigureHeight, calculateMass, formatMass, formatForce, exportToCSV } from '../utils';
-import { Download, Upload, Scale, Weight, Settings } from 'lucide-react';
+import { getFigureHeight, calculateMass, formatMass, formatForce } from '../utils';
+import { Download, Upload, Scale, Weight } from 'lucide-react';
 
 interface SummaryProps {
     figures: FigureData[];
@@ -25,7 +25,14 @@ export const Summary: React.FC<SummaryProps> = ({ figures, unit, currentMaterial
     : '-';
 
   const handleExportJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(figures));
+    // Export complete project state including unit and material configuration
+    const exportData = {
+        figures: figures,
+        unit: unit,
+        material: currentMaterial
+    };
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     downloadAnchorNode.setAttribute("download", "geovol_project.json");
@@ -55,10 +62,6 @@ export const Summary: React.FC<SummaryProps> = ({ figures, unit, currentMaterial
             <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-0.5">
                 <button onClick={handleExportJSON} className="px-3 py-1 hover:bg-white rounded-md text-xs font-semibold text-slate-600 transition-colors flex items-center gap-1" title="Guardar Proyecto">
                     <Download size={14} /> JSON
-                </button>
-                <div className="w-px h-4 bg-slate-200"></div>
-                <button onClick={() => exportToCSV(figures, unit)} className="px-3 py-1 hover:bg-white rounded-md text-xs font-semibold text-slate-600 transition-colors flex items-center gap-1" title="Exportar Excel">
-                    <Download size={14} /> CSV
                 </button>
             </div>
         </div>

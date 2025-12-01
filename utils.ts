@@ -108,30 +108,3 @@ export const formatForce = (newtons: number): string => {
     if (newtons > 1000) return (newtons / 1000).toFixed(2) + ' kN';
     return newtons.toFixed(2) + ' N';
 };
-
-export const exportToCSV = (figures: FigureData[], unit: string) => {
-    const headers = ['ID', 'Tipo', 'Altura', 'Radio', 'RadioInf', 'Ancho', 'Profundidad', 'Volumen', 'Formula'];
-    const rows = figures.map(f => [
-        f.id,
-        f.type,
-        f.params.height,
-        f.params.radius,
-        f.params.radiusBottom,
-        f.params.width,
-        f.params.depth,
-        f.volume.toFixed(4),
-        f.formula
-    ]);
-
-    let csvContent = "data:text/csv;charset=utf-8," 
-        + headers.join(",") + "\n" 
-        + rows.map(e => e.join(",")).join("\n");
-        
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `geovol_data_${unit}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};

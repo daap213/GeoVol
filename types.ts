@@ -1,4 +1,5 @@
 
+
 export enum FigureType {
   Cylinder = 'Cilindro',
   Cube = 'Cubo',
@@ -47,3 +48,14 @@ export const MATERIALS: Record<string, Material> = {
   GOLD: { name: 'Oro', density: 19300, color: '#fbbf24', roughness: 0.1, metalness: 1.0 },
   CUSTOM: { name: 'Personalizado', density: 1000, color: '#a3a3a3', roughness: 0.5, metalness: 0.5 },
 };
+
+export interface Project {
+  id: number;
+  user_id: string;
+  name: string;
+  description: string | null;
+  data: FigureData[];
+  thumbnail: string | null;
+  created_at: string;
+  updated_at: string;
+}

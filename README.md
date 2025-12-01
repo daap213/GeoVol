@@ -4,7 +4,15 @@
 ## 1. Descripción General
 **GeoVol 3D** es una aplicación web moderna (SaaS) desarrollada con React 19. Permite a ingenieros, estudiantes y diseñadores construir objetos 3D complejos mediante el apilamiento de primitivas geométricas, calculando en tiempo real sus propiedades físicas y visualizando el resultado tanto en planos técnicos (2D) como en un entorno tridimensional interactivo (3D).
 
+En su versión 2.0, incorpora capacidades de **nube**, permitiendo a los usuarios registrarse, guardar sus proyectos y gestionarlos desde un panel de control centralizado.
+
 ## 2. Características Principales
+
+### ☁️ Gestión de Proyectos en la Nube (Fase 2)
+*   **Autenticación Segura**: Sistema de Registro y Login integrado con Supabase.
+*   **Dashboard de Proyectos**: Visualización de proyectos guardados con miniaturas generadas automáticamente desde la vista 3D.
+*   **Modo Invitado (Guest Mode)**: Permite utilizar el editor completo sin iniciar sesión. Si el usuario decide guardar, el sistema preserva su trabajo y lo redirige al flujo de registro (Guardado Diferido).
+*   **Persistencia**: Almacenamiento de configuraciones de figuras, unidades y materiales en base de datos PostgreSQL.
 
 ### 🛠️ Modelado y Construcción
 *   **Sistema de Capas**: Construcción secuencial de objetos.
@@ -13,77 +21,93 @@
 
 ### 🎨 Visualización Dual Avanzada
 *   **Vista Técnica 2D (Canvas API)**:
-    *   Representación esquemática frontal con **Acotación Automática** (etiquetas de texto H/R dibujadas directamente en el canvas).
-    *   **Zoom y Paneo Inteligente**: Navegación fluida con bloqueo de scroll nativo.
-    *   **Auto-fit Reactivo**: Sistema inteligente que detecta cambios en dimensiones y reajusta el zoom automáticamente tras un breve retardo (debounce), permitiendo una edición cómoda sin saltos visuales.
+    *   Representación esquemática frontal con **Acotación Automática**.
+    *   **Auto-fit Reactivo**: Sistema inteligente que detecta cambios en dimensiones y reajusta el zoom automáticamente.
 *   **Vista Realista 3D (Three.js)**:
-    *   **Persistencia de Cámara**: Arquitectura optimizada que mantiene la posición del usuario al actualizar la geometría.
+    *   **Captura de Miniaturas**: Generación automática de screenshots para el dashboard.
     *   **Etiquetas Flotantes (CSS2D)**: Cotas de dimensión superpuestas al modelo 3D.
-    *   **Optimización de Renderizado**: Reutilización de materiales e instancias para alto rendimiento.
+    *   **Persistencia de Cámara**: Arquitectura optimizada que mantiene la posición del usuario al actualizar la geometría.
 
 ### ⚖️ Motor de Física
 *   **Cálculo de Volumen**: Sumatoria precisa de volúmenes parciales.
-*   **Materiales**: Base de datos de densidades (Acero, Madera, Hormigón, Oro, etc.).
-*   **Masa y Peso**: Cálculo automático de masa (kg) y fuerza/peso (N) según la gravedad estándar.
+*   **Materiales**: Base de datos de densidades (Acero, Madera, Hormigón, Oro, etc.) y soporte para densidad personalizada.
+*   **Masa y Peso**: Cálculo automático de masa (kg) y fuerza/peso (N).
 
-### 💾 Gestión de Datos
-*   **Historial**: Deshacer/Rehacer (Undo/Redo) con atajos de teclado.
-*   **Exportación**: Guardado de proyectos en JSON y exportación de tablas de datos a CSV.
+### 💾 Gestión de Datos Local
+*   **Historial**: Deshacer/Rehacer (Undo/Redo) con atajos de teclado (`Ctrl+Z`).
+*   **Importación/Exportación**: Soporte para archivos JSON que incluyen geometría y configuración de materiales.
 
 ---
 
 ## 3. Arquitectura y Patrones de Diseño
 
-El proyecto ha sido diseñado siguiendo principios de ingeniería de software para asegurar escalabilidad y mantenibilidad:
+El proyecto sigue una arquitectura modular y escalable:
 
-### 🧩 Patrón Estrategia (Strategy Pattern)
-La lógica de cálculo geométrico en `utils.ts` utiliza un patrón de estrategia (`FIGURE_STRATEGIES`). Esto permite añadir nuevas figuras geométricas en el futuro simplemente extendiendo el objeto de configuración, sin necesidad de modificar el flujo de control principal, cumpliendo con el principio **Open/Closed** de SOLID.
-
-### 🎣 Custom Hooks (Separación de Intereses)
-La lógica de estado y gestión de datos se ha encapsulado en el hook `useFigureManager` (`hooks.ts`). Esto separa la lógica de negocio de la interfaz de usuario (`App.tsx`), facilitando las pruebas y la reutilización del código.
-
-### ⚡ Optimización Gráfica
-En `Viewer3D.tsx`, se gestionan las instancias de Three.js para minimizar la recolección de basura (Garbage Collection). Los materiales y geometrías se crean y destruyen de manera controlada, y las etiquetas HTML se gestionan manualmente para evitar fugas de memoria en el DOM.
+*   **Enrutamiento de Estado**: `App.tsx` actúa como un router ligero gestionando las vistas (`LANDING`, `AUTH`, `DASHBOARD`, `EDITOR`) y el estado de la sesión.
+*   **Patrón Estrategia (Strategy Pattern)**: La lógica de cálculo geométrico en `utils.ts` permite añadir nuevas figuras fácilmente.
+*   **Custom Hooks**: `useFigureManager` encapsula toda la lógica de manipulación de figuras e historial.
+*   **Optimización Gráfica**: Gestión manual de recursos en Three.js para evitar fugas de memoria.
 
 ---
 
-## 4. Estructura del Proyecto
+## 4. Configuración del Backend (Supabase)
 
-### Componentes Principales (`/src/components`)
+Para desplegar este proyecto, es necesario configurar un proyecto en Supabase y ejecutar el siguiente script SQL en el Editor SQL para crear la estructura de base de datos necesaria:
 
-#### `LandingPage.tsx`
-Página de presentación estilo SaaS.
-*   **Diseño**: Hero section con animaciones CSS (blobs), lista de características y llamada a la acción.
-*   **Identidad**: Refleja la marca GeoVol 3D (2025).
+```sql
+-- 1. Crear tabla de proyectos
+create table projects (
+  id bigint generated by default as identity primary key,
+  user_id uuid references auth.users not null,
+  name text not null,
+  description text,
+  data jsonb not null, -- Almacena el array de figuras
+  thumbnail text, -- Almacena la imagen en base64
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
-#### `FigureCard.tsx`
-Tarjeta de edición para cada figura.
-*   **SmartInput**: Controles numéricos táctiles (+/-) con validación de entrada.
+-- 2. Habilitar seguridad (Row Level Security)
+alter table projects enable row level security;
 
-#### `Summary.tsx`
-Panel de resultados y configuración.
-*   Calcula totales y gestiona la selección de materiales y exportación.
+-- 3. Crear políticas de acceso (CRUD solo para el propietario)
+create policy "Users can view their own projects" on projects for select using (auth.uid() = user_id);
+create policy "Users can insert their own projects" on projects for insert with check (auth.uid() = user_id);
+create policy "Users can update their own projects" on projects for update using (auth.uid() = user_id);
+create policy "Users can delete their own projects" on projects for delete using (auth.uid() = user_id);
+```
 
-#### `Viewer2D.tsx`
-Motor de renderizado técnico.
-*   Usa HTML5 Canvas para dibujar vistas esquemáticas acotadas.
+Luego, actualice el archivo `src/supabaseClient.ts` con sus credenciales:
 
-#### `Viewer3D.tsx`
-Motor de renderizado realista.
-*   Integra Three.js y CSS2DRenderer para una experiencia inmersiva.
+```typescript
+const SUPABASE_URL = 'SU_URL_DE_SUPABASE';
+const SUPABASE_ANON_KEY = 'SU_CLAVE_ANONIMA';
+```
 
 ---
 
-## 5. Tecnologías
+## 5. Estructura del Proyecto
+
+### Componentes Clave (`/src/components`)
+
+*   **`Auth.tsx`**: Maneja el registro e inicio de sesión.
+*   **`Dashboard.tsx`**: Panel principal para usuarios autenticados. Lista proyectos y permite crear nuevos o eliminar existentes.
+*   **`Editor.tsx`**: El núcleo de la aplicación. Contiene el lienzo de trabajo, integración con visualizadores y lógica de guardado.
+*   **`Viewer3D.tsx`**: Motor gráfico. Expone métodos imperativos (`captureScreenshot`) mediante `forwardRef` para generar las miniaturas del dashboard.
+*   **`LandingPage.tsx`**: Página de entrada optimizada para conversión.
+
+---
+
+## 6. Tecnologías
 
 *   **Frontend**: React 19, TypeScript.
+*   **Backend / BaaS**: Supabase (PostgreSQL + Auth).
 *   **Gráficos**: Three.js, CSS2DRenderer.
 *   **Estilos**: Tailwind CSS v3.4.
-*   **Iconos**: Lucide React.
 
 ---
 
-## 6. Créditos
+## 7. Créditos
 
 **Diseño y Desarrollo**: Daniel Alvarado  
 **Año**: 2025

@@ -1,8 +1,7 @@
-
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { FigureData, FigureType, Material } from '../types';
 import { Layers, Ruler } from 'lucide-react';
 
@@ -11,7 +10,11 @@ interface Viewer3DProps {
   materialConfig: Material;
 }
 
-export const Viewer3D: React.FC<Viewer3DProps> = ({ figures, materialConfig }) => {
+export interface Viewer3DHandle {
+  captureScreenshot: () => string;
+}
+
+export const Viewer3D = forwardRef<Viewer3DHandle, Viewer3DProps>(({ figures, materialConfig }, ref) => {
   const mountRef = useRef<HTMLDivElement>(null);
   
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -24,6 +27,17 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({ figures, materialConfig }) =
 
   const [isWireframe, setIsWireframe] = useState(false);
   const [showDimensions, setShowDimensions] = useState(true);
+
+  // Expose capture method
+  useImperativeHandle(ref, () => ({
+    captureScreenshot: () => {
+      if (rendererRef.current && sceneRef.current && cameraRef.current) {
+        rendererRef.current.render(sceneRef.current, cameraRef.current);
+        return rendererRef.current.domElement.toDataURL('image/png');
+      }
+      return '';
+    }
+  }));
 
   // Initialize Scene (One time)
   useEffect(() => {
@@ -46,7 +60,7 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({ figures, materialConfig }) =
     cameraRef.current = camera;
 
     // Renderers
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); // preserveDrawingBuffer needed for screenshot
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
     mountRef.current.appendChild(renderer.domElement);
@@ -263,4 +277,4 @@ export const Viewer3D: React.FC<Viewer3DProps> = ({ figures, materialConfig }) =
       </div>
     </div>
   );
-};
+});

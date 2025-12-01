@@ -74,7 +74,7 @@ export const getFigureHeight = (type: FigureType, params: FigureParams): number 
     return strategy ? strategy.getHeight(params) : params.height;
 };
 
-export const getDefaultParams = (type: FigureType): FigureParams => {
+export const getDefaultParams = (_type: FigureType): FigureParams => {
   return {
     height: 2,
     radius: 1,

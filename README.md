@@ -116,6 +116,8 @@ src/
 4.  **Variables de Entorno**:
     Agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
+**Nota**: El proyecto utiliza `TypeScript` en modo estricto. Asegúrate de que no haya advertencias de variables no utilizadas antes de hacer commit, ya que el proceso de build (CI/CD) de Cloudflare fallará si existen errores de linter.
+
 ---
 
 ## 7. Créditos
